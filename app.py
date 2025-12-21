@@ -5,7 +5,7 @@ import pickle
 with open("TFIDF_vectorizer.pkl", "rb") as f:
     tfidf = pickle.load(f)
 
-with open("model.pkl", "rb") as f:
+with open("Azhal_Logic_Regression_Model.pkl", "rb") as f:
     model = pickle.load(f)
 
 st.title("Text classifier demo")
