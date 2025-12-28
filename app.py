@@ -32,4 +32,4 @@ if st.button("🔍 Check Authenticity", type="primary"):
             st.error("🚨 **FAKE**")
             st.info("Confidence: **95.0%**")
     else:
-        st.warning("Please enter text!")
+        st.warning("Please enter text!!!")
