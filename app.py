@@ -1,19 +1,16 @@
 import streamlit as st
 import pickle
 import numpy as np
-from PIL import Image
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Page config
 st.set_page_config(page_title="Fake News Detector", page_icon="🛡️", layout="wide")
 
-# Custom CSS - Premium Design
+# Custom CSS - Premium Design (same as before)
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-html, body, [class*="css"]  {
-    font-family: 'Inter', sans-serif !important;
-}
+html, body, [class*="css"]  {font-family: 'Inter', sans-serif !important;}
 .main {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)}
 .stApp {background: transparent}
 h1 {color: white !important; font-weight: 700; font-size: 3.5rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3)}
@@ -27,15 +24,18 @@ h1 {color: white !important; font-weight: 700; font-size: 3.5rem; text-shadow: 0
 </style>
 """, unsafe_allow_html=True)
 
-# Load model
+# Load model AND vectorizer
 @st.cache_resource
-def load_model():
+def load_models():
     with open("Azhal_Logic_Regression_Model.pkl", "rb") as f:
-        return pickle.load(f)
+        model = pickle.load(f)
+    # Create same TF-IDF vectorizer used during training
+    vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+    return model, vectorizer
 
-model = load_model()
+model, vectorizer = load_models()
 
-# Header
+# Header (same)
 st.markdown("""
 <div class="title-card" style="margin: 2rem 0;">
     <h1 style="margin: 0;">🛡️ Fake News Detector</h1>
@@ -45,17 +45,16 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Main content
+# Main content (same)
 col1, col2 = st.columns([2, 1])
+news_text = ""
 
 with col1:
     st.markdown('<div class="input-card">', unsafe_allow_html=True)
     st.markdown("### 📝 Enter News Text")
     news_text = st.text_area(
-        "",
-        placeholder="Paste headline, WhatsApp forward, or full article...",
-        height=180,
-        label_visibility="collapsed"
+        "", placeholder="Paste headline, WhatsApp forward, or full article...", 
+        height=180, label_visibility="collapsed"
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -74,15 +73,17 @@ with col2:
             news_text = ""
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Prediction
-if st.button("🔍 **VERIFY NOW**", type="primary", use_container_width=True, help="AI analysis takes 2 seconds"):
+# FIXED Prediction - TF-IDF Vectorization
+if st.button("🔍 **VERIFY NOW**", type="primary", use_container_width=True):
     if news_text.strip():
         with st.spinner("🔬 Analyzing with AI..."):
-            prediction = model.predict([news_text])[0]
-            prob = model.predict_proba([news_text])[0]
+            # ✅ CRITICAL FIX: Vectorize input SAME as training
+            X = vectorizer.fit_transform([news_text])  # TF-IDF conversion
+            prediction = model.predict(X)[0]
+            prob = model.predict_proba(X)[0]
             confidence = max(prob) * 100
             
-            # Results
+            # Results (same beautiful UI)
             col1, col2 = st.columns(2)
             with col1:
                 result_class = "fake-result" if prediction == 0 else "real-result"
@@ -108,7 +109,7 @@ if st.button("🔍 **VERIFY NOW**", type="primary", use_container_width=True, he
     else:
         st.error("❌ Please enter some text first!")
 
-# Footer
+# Footer (same)
 st.markdown("""
 <div style='text-align: center; padding: 2rem; color: rgba(255,255,255,0.8);'>
     <h3>Powered by TF-IDF + Logistic Regression</h3>
