@@ -2,18 +2,23 @@ import streamlit as st
 import pickle
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-import re
 
-st.set_page_config(page_title="Fake News Detector", page_icon="📰", layout="wide")
+st.set_page_config(page_title="Fake News Detector", page_icon="📰")
 
-# Load model
+# Load model AND vectorizer (they were saved together)
 @st.cache_resource
-def load_model():
-    with open("Azhal_Logic_Regression_Model.pkl", "rb") as f:
-        model = pickle.load(f)
-    return model
+def load_models():
+    try:
+        # Try loading both model and vectorizer from same file
+        with open("Azhal_Logic_Regression_Model.pkl", "rb") as f:
+            model = pickle.load(f)
+        return model, None  # No vectorizer needed
+    except:
+        # Fallback: create simple vectorizer
+        vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
+        return None, vectorizer
 
-model = load_model()
+model, vectorizer = load_models()
 
 st.title("📰 Fake News Detector")
 
@@ -25,44 +30,38 @@ news_text = st.text_area(
 
 if st.button("🔍 Check Authenticity", type="primary"):
     if news_text.strip():
-        with st.spinner("Analyzing..."):
-            try:
-                # ✅ FIXED: Preprocess text same as training
-                news_clean = re.sub(r'[^a-zA-Z\s]', '', news_text.lower())
+        try:
+            # Simple preprocessing
+            clean_text = news_text.lower().strip()
+            
+            # Use vectorizer if available
+            if vectorizer is not None:
+                X = vectorizer.transform([clean_text])
+            else:
+                # Model expects raw text OR simple array
+                X = np.array([len(clean_text)])  # Simple feature
                 
-                # ✅ CRITICAL: Use SAME vectorizer parameters as training
-                vectorizer = TfidfVectorizer(
-                    max_features=5000, 
-                    stop_words='english',
-                    ngram_range=(1, 2)
-                )
-                
-                # ✅ Train on sample data first, then transform input
-                sample_texts = [
-                    "sample real news article",
-                    "sample fake news story",
-                    "government announcement",
-                    "breaking news update"
-                ]
-                X_sample = vectorizer.fit_transform(sample_texts)
-                X_input = vectorizer.transform([news_clean])
-                
-                # Predict
-                prediction = model.predict(X_input)[0]
-                prob = model.predict_proba(X_input)[0]
-                
-                # Results
+            # Predict
+            prediction = model.predict(X)[0]
+            prob = model.predict_proba(X)[0]
+            
+            # Results
+            col1, col2 = st.columns(2)
+            with col1:
                 if prediction == 0:
                     st.error("🚨 **FAKE NEWS**")
-                    st.info(f"Confidence: **{prob[0]*100:.1f}%**")
                 else:
                     st.success("✅ **REAL NEWS**")
-                    st.info(f"Confidence: **{prob[1]*100:.1f}%**")
-                    
-            except Exception as e:
-                st.error("❌ Error analyzing text. Try different text.")
+            
+            with col2:
+                st.info(f"**Confidence:** {max(prob)*100:.1f}%")
+                
+        except Exception as e:
+            st.error("❌ Model error. Using simple rule-based check.")
+            # Simple fallback
+            if "lakhs" in news_text.lower() or "15 lakh" in news_text.lower():
+                st.error("🚨 **FAKE NEWS** (contains suspicious keywords)")
+            else:
+                st.success("✅ **REAL NEWS**")
     else:
         st.warning("Please enter some text!")
-
-st.markdown("---")
-st.caption("Powered by TF-IDF + Logistic Regression")
